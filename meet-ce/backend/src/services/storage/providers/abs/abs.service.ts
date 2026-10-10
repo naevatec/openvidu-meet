@@ -19,6 +19,16 @@ import { LoggerService } from '../../../logger.service.js';
 const hasErrorCode = (error: unknown, code: string): boolean =>
 	typeof error === 'object' && error !== null && 'code' in error && error.code === code;
 
+/**
+ * TEMPORARY, NOT PART OF openvidu-meet PR #108. Lets this build's AZURE_ACCOUNT_KEY
+ * be a throwaway non-empty value (so the official, unmodified openvidu-operator
+ * image's "${openvidu.AZURE_ACCOUNT_KEY:?mandatory}" check in openvidu.env is
+ * satisfied, since that image can't be rebuilt without access to OpenVidu's private
+ * licensing-go/offline-licensing-go modules) while this container still exercises
+ * the real DefaultAzureCredential path. Must never reach the actual pull request.
+ */
+const TEST_ONLY_IGNORE_ACCOUNT_KEY_SENTINEL = 'TEST_ONLY_IGNORE_MANAGED_IDENTITY_VALIDATION';
+
 @injectable()
 export class ABSService {
 	private blobServiceClient: BlobServiceClient;
@@ -29,7 +39,7 @@ export class ABSService {
 			throw new Error('Azure Blob Storage configuration is incomplete');
 		}
 
-		if (MEET_ENV.AZURE_ACCOUNT_KEY) {
+		if (MEET_ENV.AZURE_ACCOUNT_KEY && MEET_ENV.AZURE_ACCOUNT_KEY !== TEST_ONLY_IGNORE_ACCOUNT_KEY_SENTINEL) {
 			const AZURE_STORAGE_CONNECTION_STRING = `DefaultEndpointsProtocol=https;AccountName=${MEET_ENV.AZURE_ACCOUNT_NAME};AccountKey=${MEET_ENV.AZURE_ACCOUNT_KEY};EndpointSuffix=core.windows.net`;
 			this.blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
 		} else {
